@@ -627,12 +627,20 @@
  * - Real-time employee data fetching from API
  * - Task creation with proper employee assignment
  * - Loading states and error handling
+ * - Full backend API integration (CRUD operations)
  *
- * Access Control:
- * - Admin: Full access
- * - Project Manager (role): Full access
- * - Employee + Project Manager (designation): Full access
- * - Other employees: Access denied
+ * Task Creation Permissions:
+ * ✅ Admin role: Can create tasks
+ * ✅ Project Manager role: Can create tasks
+ * ✅ Employee + Project Manager designation: Can create tasks
+ * ❌ Other employees: Cannot create tasks (view only)
+ *
+ * Backend APIs Used:
+ * - POST /api/tasks (Create task)
+ * - GET /api/tasks (Load tasks)
+ * - PUT /api/tasks/:id (Update task status)
+ * - DELETE /api/tasks/:id (Delete task)
+ * - GET /api/employees (Load employees for assignment)
  */
 
 "use client";
@@ -666,11 +674,19 @@ export default function TicketingSystem() {
   const [employees, setEmployees] = useState([]);
   const [employeesByDesignation, setEmployeesByDesignation] = useState({});
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTaskStatus, setNewTaskStatus] = useState("To Do");
   const [selectedDesignation, setSelectedDesignation] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+
+  // Check if user can create tasks
+  const canCreateTasks = user && (
+    user.role === 'admin' ||
+    user.role === 'project_manager' ||
+    (user.role === 'employee' && user.designation === 'project_manager')
+  );
 
   // Role-based access control
   const hasAccess = user && (
@@ -680,31 +696,45 @@ export default function TicketingSystem() {
   );
 
   // Debug logging for access control
-  console.log("=== TASKS PAGE ACCESS CHECK ===");
-  console.log("User:", user);
-  console.log("User Role:", user?.role);
-  console.log("User Designation:", user?.designation);
-  console.log("Access Logic:", "admin OR project_manager role OR (employee role AND project_manager designation)");
-  console.log("Has Access:", hasAccess);
-  console.log("================================");
 
-  // Fetch and log all users data
+  // Fetch employees and tasks data
   useEffect(() => {
-    if (!hasAccess) return;
+    console.log("useEffect running, hasAccess:", hasAccess, "user:", user);
 
-    const fetchAllUsers = async () => {
+    if (!hasAccess) {
+      console.log("No access, skipping data fetch");
+      return;
+    }
+
+    const fetchData = async () => {
+      console.log("Starting data fetch...");
       setLoadingEmployees(true);
+      setLoadingTasks(true);
+
       try {
-        const response = await fetch("http://localhost:5000/api/employees", {
+        const token = localStorage.getItem('accessToken');
+        console.log("Token from localStorage:", token ? "Present" : "Missing");
+
+        if (!token) {
+          console.error("No token found in localStorage");
+          alert("Please log in to access tasks");
+          return;
+        }
+
+        // Fetch employees
+        console.log("Fetching employees...");
+        const employeesResponse = await fetch("http://localhost:5000/api/employees", {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            'Authorization': `Bearer ${token}`
           }
         });
-        const data = await response.json();
-        console.log("allUserData", data);
 
-        if (data.success && data.data && data.data.employees) {
-          const employeesList = data.data.employees;
+        console.log("Employees response status:", employeesResponse.status);
+        const employeesData = await employeesResponse.json();
+        console.log("Employees data:", employeesData);
+
+        if (employeesData.success && employeesData.data && employeesData.data.employees) {
+          const employeesList = employeesData.data.employees;
           setEmployees(employeesList);
 
           // Group employees by designation
@@ -720,46 +750,159 @@ export default function TicketingSystem() {
           setEmployeesByDesignation(grouped);
           console.log("Employees grouped by designation:", grouped);
         }
+
+        // Fetch tasks
+        console.log("Fetching tasks...");
+        const tasksResponse = await fetch("http://localhost:5000/api/tasks", {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        console.log("Tasks response status:", tasksResponse.status);
+        const tasksData = await tasksResponse.json();
+        console.log("Tasks data:", tasksData);
+
+        if (tasksData.success && tasksData.data && tasksData.data.tasks) {
+          const tasksList = tasksData.data.tasks.map(task => ({
+            id: task._id,
+            title: task.title,
+            status: task.status,
+            createdAt: new Date(task.createdAt),
+            priority: task.priority,
+            assignee: task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "Unknown",
+            assigneeId: task.assignedTo?._id,
+            designation: task.assignedTo?.designation || "Unknown",
+          }));
+
+          setTasks(tasksList);
+          console.log("Tasks loaded from backend:", tasksList);
+        } else {
+          console.log("No tasks found or API error:", tasksData);
+          setTasks([]); // Clear tasks if none found
+        }
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching data:", error);
+        alert("Error loading data. Please check your connection.");
+        setTasks([]); // Clear tasks on error
       } finally {
         setLoadingEmployees(false);
+        setLoadingTasks(false);
       }
     };
 
-    fetchAllUsers();
-  }, [hasAccess]);
+    fetchData();
+  }, [hasAccess, user]);
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!newTaskTitle.trim() || !selectedEmployeeId) return;
 
-    const selectedEmployee = employees.find(emp => emp._id === selectedEmployeeId);
-
-    setTasks([
-      ...tasks,
-      {
-        id: `TSK-${String(Date.now()).slice(-3)}`,
+    try {
+      const taskData = {
         title: newTaskTitle,
-        status: newTaskStatus,
-        createdAt: new Date(),
-        priority: "Medium",
-        assignee: selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : "Unknown",
-        assigneeId: selectedEmployeeId,
-        designation: selectedEmployee?.designation || "Unknown",
-      },
-    ]);
-    setNewTaskTitle("");
-    setSelectedDesignation("");
-    setSelectedEmployeeId("");
-    setShowAddTask(false);
+        description: newTaskTitle, // Using title as description for now
+        assignedTo: selectedEmployeeId,
+        priority: "medium",
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+        category: selectedDesignation.toLowerCase(),
+        tags: [selectedDesignation.toLowerCase()]
+      };
+
+      const response = await fetch("http://localhost:5000/api/tasks", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify(taskData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("Task created successfully:", data.data.task);
+
+        // Add the new task to the local state
+        const selectedEmployee = employees.find(emp => emp._id === selectedEmployeeId);
+        const newTask = {
+          id: data.data.task._id,
+          title: data.data.task.title,
+          status: data.data.task.status,
+          createdAt: new Date(data.data.task.createdAt),
+          priority: data.data.task.priority,
+          assignee: data.data.task.assignedTo ? `${data.data.task.assignedTo.firstName} ${data.data.task.assignedTo.lastName}` : "Unknown",
+          assigneeId: data.data.task.assignedTo?._id,
+          designation: data.data.task.assignedTo?.designation || "Unknown",
+        };
+
+        setTasks(prevTasks => [newTask, ...prevTasks]);
+
+        // Reset form
+        setNewTaskTitle("");
+        setSelectedDesignation("");
+        setSelectedEmployeeId("");
+        setShowAddTask(false);
+
+        alert("Task created successfully!");
+      } else {
+        alert("Failed to create task: " + (data.error || data.message));
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      alert("Error creating task. Please try again.");
+    }
   };
 
-  const handleDeleteTask = (taskId) => {
-    setTasks(tasks.filter((task) => task.id !== taskId));
+  const handleDeleteTask = async (taskId) => {
+    if (!confirm("Are you sure you want to delete this task?")) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+        method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove from local state
+        setTasks(tasks.filter((task) => task.id !== taskId));
+        console.log("Task deleted successfully");
+      } else {
+        alert("Failed to delete task: " + (data.error || data.message));
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      alert("Error deleting task. Please try again.");
+    }
   };
 
-  const handleStatusChange = (taskId, newStatus) => {
-    setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+  const handleStatusChange = async (taskId, newStatus) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update local state
+        setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+        console.log("Task status updated successfully");
+      } else {
+        alert("Failed to update task status: " + (data.error || data.message));
+      }
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      alert("Error updating task status. Please try again.");
+    }
   };
 
   // If user doesn't have access, show access denied
@@ -831,22 +974,35 @@ export default function TicketingSystem() {
                 Manage all tasks in a simple table view
               </p>
             </div>
-            <button
-              onClick={() => setShowAddTask(true)}
-              style={{
-                backgroundColor: "#3b82f6",
-                color: "white",
+            {canCreateTasks ? (
+              <button
+                onClick={() => setShowAddTask(true)}
+                style={{
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                }}
+              >
+                <Plus size={18} /> Add Task
+              </button>
+            ) : (
+              <div style={{
+                backgroundColor: "#fef3c7",
+                color: "#d97706",
                 padding: "8px 16px",
                 borderRadius: "8px",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                cursor: "pointer",
-              }}
-            >
-              <Plus size={18} /> Add Task
-            </button>
+                fontSize: "14px",
+                border: "1px solid #f59e0b"
+              }}>
+                You need Admin role, Project Manager role, or Employee with Project Manager designation to create tasks
+              </div>
+            )}
           </div>
 
           {/* Table */}
