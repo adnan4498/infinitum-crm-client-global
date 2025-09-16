@@ -36,6 +36,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Image from "next/image"
+import { useAuth } from "@/contexts/AuthContext"
 
 const data = {
   user: {
@@ -133,6 +134,29 @@ const data = {
 export function AppSidebar({
   ...props
 }) {
+  const { user } = useAuth();
+
+  // Filter navigation items based on user role and designation
+  const filteredNavMain = data.navMain.filter(item => {
+    // Hide Tasks for employees (only show for admin, project_manager role, or employee with project_manager designation)
+    if (item.title === "Tasks") {
+      const hasAccess = user && (
+        user.role === 'admin' ||
+        user.role === 'project_manager' ||
+        (user.role === 'employee' && user.designation === 'project_manager')
+      );
+      console.log("=== SIDEBAR TASKS VISIBILITY ===");
+      console.log("User:", user);
+      console.log("User Role:", user?.role);
+      console.log("User Designation:", user?.designation);
+      console.log("Tasks Menu Visible:", hasAccess);
+      console.log("================================");
+      return hasAccess;
+    }
+    // Show all other items
+    return true;
+  });
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -149,7 +173,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={filteredNavMain} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

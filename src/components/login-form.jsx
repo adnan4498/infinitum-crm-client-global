@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/AuthContext"
 
 export function LoginForm({
   className,
@@ -16,20 +17,41 @@ export function LoginForm({
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simple authentication check
-    if (email === "admin@infinitum.com" && password === "admin123") {
-      toast.success("Login successful!")
-      router.push("/dashboard")
-    } else {
-      toast.error("Invalid email or password")
-    }
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      })
 
-    setIsLoading(false)
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Use auth context to handle login
+        login(data.data.user, data.data.tokens)
+
+        toast.success(data.message || "Login successful!")
+        router.push("/dashboard")
+      } else {
+        toast.error(data.error || data.message || "Login failed")
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      toast.error("Network error. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -87,7 +109,7 @@ export function LoginForm({
       </div>
       <div className="text-center text-sm">
         Don&apos;t have an account?{" "}
-        <a href="#" className="underline underline-offset-4">
+        <a href="/signup" className="underline underline-offset-4">
           Sign up
         </a>
       </div>
