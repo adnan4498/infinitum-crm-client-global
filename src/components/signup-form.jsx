@@ -17,6 +17,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function SignupForm({ className, ...props }) {
+  const URL = process.env.NEXT_PUBLIC_URL;
+  const PRODUCTION_URL = process.env.PRODUCTION_URL;
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -62,7 +65,8 @@ export function SignupForm({ className, ...props }) {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
+      // const response = await fetch("http://localhost:5000/api/auth/register", {
+      const response = await fetch(`${URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,7 +83,7 @@ export function SignupForm({ className, ...props }) {
 
       const data = await response.json();
 
-      console.log(data, "data from signup")
+      console.log(data, "data from signup");
 
       if (response.ok && data.success) {
         // Use auth context to handle login
@@ -159,8 +163,12 @@ export function SignupForm({ className, ...props }) {
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="frontend">Frontend Developer</SelectItem>
               <SelectItem value="backend">Backend Developer</SelectItem>
-              <SelectItem value="software-engineer">Software Engineer</SelectItem>
-              <SelectItem value="senior-software-engineer">Senior Software Engineer</SelectItem>
+              <SelectItem value="software-engineer">
+                Software Engineer
+              </SelectItem>
+              <SelectItem value="senior-software-engineer">
+                Senior Software Engineer
+              </SelectItem>
               <SelectItem value="fullstack">Full Stack Developer</SelectItem>
               <SelectItem value="tech-lead">Tech Lead</SelectItem>
               <SelectItem value="project_manager">Project Manager</SelectItem>

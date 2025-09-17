@@ -1,5 +1,3 @@
-
-
 // export default function TasksPage() {
 // //   return (
 // //     <DashboardLayout>
@@ -39,9 +37,6 @@
 // //   );
 // // }
 
-
-
-
 // "use client";
 
 // import React, { useState } from 'react';
@@ -56,26 +51,26 @@
 // ];
 
 // const initialTasks = [
-//   { 
-//     id: 'TSK-001', 
-//     title: 'Design login page', 
-//     status: 'To Do', 
+//   {
+//     id: 'TSK-001',
+//     title: 'Design login page',
+//     status: 'To Do',
 //     createdAt: new Date(),
 //     priority: 'High',
 //     assignee: 'Designer'
 //   },
-//   { 
-//     id: 'TSK-002', 
-//     title: 'Setup database connection and schema', 
-//     status: 'In Progress', 
+//   {
+//     id: 'TSK-002',
+//     title: 'Setup database connection and schema',
+//     status: 'In Progress',
 //     createdAt: new Date(),
 //     priority: 'Medium',
 //     assignee: 'Developer'
 //   },
-//   { 
-//     id: 'TSK-003', 
-//     title: 'Write API documentation', 
-//     status: 'Done', 
+//   {
+//     id: 'TSK-003',
+//     title: 'Write API documentation',
+//     status: 'Done',
 //     createdAt: new Date(),
 //     priority: 'Low',
 //     assignee: 'Project Manager'
@@ -105,7 +100,7 @@
 
 //   const handleAddTask = () => {
 //     if (!newTaskTitle.trim()) return;
-    
+
 //     setTasks([
 //       ...tasks,
 //       {
@@ -123,7 +118,7 @@
 //   };
 
 //   const handleStatusChange = (taskId, newStatus) => {
-//     setTasks(tasks.map(task => 
+//     setTasks(tasks.map(task =>
 //       task.id === taskId ? { ...task, status: newStatus } : task
 //     ));
 //   };
@@ -209,7 +204,7 @@
 //               Add Task
 //             </button>
 //           </div>
-          
+
 //           {/* Stats */}
 //           <div style={{
 //             display: 'flex',
@@ -393,7 +388,7 @@
 //                     {columnTasks.length}
 //                   </span>
 //                 </div>
-                
+
 //                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 //                   {columnTasks.map((task) => (
 //                     <div
@@ -560,7 +555,7 @@
 //                             </span>
 //                           )}
 //                         </div>
-                        
+
 //                         <div style={{
 //                           display: 'flex',
 //                           alignItems: 'center',
@@ -592,7 +587,7 @@
 //                       )}
 //                     </div>
 //                   ))}
-                  
+
 //                   {/* Empty State */}
 //                   {columnTasks.length === 0 && (
 //                     <div style={{
@@ -614,8 +609,6 @@
 //     </DashboardLayout>
 //   );
 // }
-
-
 
 /**
  * Tasks Management Page
@@ -650,8 +643,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { useAuth } from "@/contexts/AuthContext";
 
-
-import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // export default function TasksPage() {
 //   return (
@@ -660,7 +652,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 //     </ProtectedRoute>
 //   );
 // }
-
 
 const priorityStyles = {
   High: { backgroundColor: "#fee2e2", color: "#b91c1c" },
@@ -681,19 +672,22 @@ export default function TicketingSystem() {
   const [selectedDesignation, setSelectedDesignation] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
+  const URL = process.env.NEXT_PUBLIC_URL;
+  const PRODUCTION_URL = process.env.PRODUCTION_URL;
+
   // Check if user can create tasks
-  const canCreateTasks = user && (
-    user.role === 'admin' ||
-    user.role === 'project_manager' ||
-    (user.role === 'employee' && user.designation === 'project_manager')
-  );
+  const canCreateTasks =
+    user &&
+    (user.role === "admin" ||
+      user.role === "project_manager" ||
+      (user.role === "employee" && user.designation === "project_manager"));
 
   // Role-based access control
-  const hasAccess = user && (
-    user.role === 'admin' ||
-    user.role === 'project_manager' ||
-    (user.role === 'employee' && user.designation === 'project_manager')
-  );
+  const hasAccess =
+    user &&
+    (user.role === "admin" ||
+      user.role === "project_manager" ||
+      (user.role === "employee" && user.designation === "project_manager"));
 
   // Debug logging for access control
 
@@ -712,7 +706,7 @@ export default function TicketingSystem() {
       setLoadingTasks(true);
 
       try {
-        const token = localStorage.getItem('accessToken');
+        const token = localStorage.getItem("accessToken");
         console.log("Token from localStorage:", token ? "Present" : "Missing");
 
         if (!token) {
@@ -723,23 +717,28 @@ export default function TicketingSystem() {
 
         // Fetch employees
         console.log("Fetching employees...");
-        const employeesResponse = await fetch("http://localhost:5000/api/employees", {
+        // const employeesResponse = await fetch("https://adnan4498-infinitum-crm-server-glob.vercel.app/api/employees",
+        const employeesResponse = await fetch(`${URL}/api/employees`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         console.log("Employees response status:", employeesResponse.status);
         const employeesData = await employeesResponse.json();
         console.log("Employees data:", employeesData);
 
-        if (employeesData.success && employeesData.data && employeesData.data.employees) {
+        if (
+          employeesData.success &&
+          employeesData.data &&
+          employeesData.data.employees
+        ) {
           const employeesList = employeesData.data.employees;
           setEmployees(employeesList);
 
           // Group employees by designation
           const grouped = employeesList.reduce((acc, employee) => {
-            const designation = employee.designation || 'Other';
+            const designation = employee.designation || "Other";
             if (!acc[designation]) {
               acc[designation] = [];
             }
@@ -753,10 +752,11 @@ export default function TicketingSystem() {
 
         // Fetch tasks
         console.log("Fetching tasks...");
-        const tasksResponse = await fetch("http://localhost:5000/api/tasks", {
+        // const tasksResponse = await fetch("https://adnan4498-infinitum-crm-server-glob.vercel.app/api/tasks",
+        const tasksResponse = await fetch(`${URL}/api/tasks`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         console.log("Tasks response status:", tasksResponse.status);
@@ -764,13 +764,15 @@ export default function TicketingSystem() {
         console.log("Tasks data:", tasksData);
 
         if (tasksData.success && tasksData.data && tasksData.data.tasks) {
-          const tasksList = tasksData.data.tasks.map(task => ({
+          const tasksList = tasksData.data.tasks.map((task) => ({
             id: task._id,
             title: task.title,
             status: task.status,
             createdAt: new Date(task.createdAt),
             priority: task.priority,
-            assignee: task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "Unknown",
+            assignee: task.assignedTo
+              ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}`
+              : "Unknown",
             assigneeId: task.assignedTo?._id,
             designation: task.assignedTo?.designation || "Unknown",
           }));
@@ -805,17 +807,20 @@ export default function TicketingSystem() {
         priority: "medium",
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
         category: selectedDesignation.toLowerCase(),
-        tags: [selectedDesignation.toLowerCase()]
+        tags: [selectedDesignation.toLowerCase()],
       };
 
-      const response = await fetch("http://localhost:5000/api/tasks", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify(taskData)
-      });
+      // const response = await fetch("https://adnan4498-infinitum-crm-server-glob.vercel.app/api/tasks",
+      const response = await fetch(`${URL}/api/tasks`, 
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify(taskData),
+        }
+      );
 
       const data = await response.json();
 
@@ -823,19 +828,23 @@ export default function TicketingSystem() {
         console.log("Task created successfully:", data.data.task);
 
         // Add the new task to the local state
-        const selectedEmployee = employees.find(emp => emp._id === selectedEmployeeId);
+        const selectedEmployee = employees.find(
+          (emp) => emp._id === selectedEmployeeId
+        );
         const newTask = {
           id: data.data.task._id,
           title: data.data.task.title,
           status: data.data.task.status,
           createdAt: new Date(data.data.task.createdAt),
           priority: data.data.task.priority,
-          assignee: data.data.task.assignedTo ? `${data.data.task.assignedTo.firstName} ${data.data.task.assignedTo.lastName}` : "Unknown",
+          assignee: data.data.task.assignedTo
+            ? `${data.data.task.assignedTo.firstName} ${data.data.task.assignedTo.lastName}`
+            : "Unknown",
           assigneeId: data.data.task.assignedTo?._id,
           designation: data.data.task.assignedTo?.designation || "Unknown",
         };
 
-        setTasks(prevTasks => [newTask, ...prevTasks]);
+        setTasks((prevTasks) => [newTask, ...prevTasks]);
 
         // Reset form
         setNewTaskTitle("");
@@ -857,12 +866,15 @@ export default function TicketingSystem() {
     if (!confirm("Are you sure you want to delete this task?")) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
-        method: "DELETE",
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      // const response = await fetch(`https://adnan4498-infinitum-crm-server-glob.vercel.app/api/tasks/${taskId}`,
+      const response = await fetch(`${URL}/api/tasks/${taskId}`, 
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
-      });
+      );
 
       const data = await response.json();
 
@@ -881,20 +893,25 @@ export default function TicketingSystem() {
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
-        method: "PUT",
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
+      // const response = await fetch(`https://adnan4498-infinitum-crm-server-glob.vercel.app/api/tasks/${taskId}`,
+      const response = await fetch(`${URL}/api/auth/${taskId}`, 
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
 
       const data = await response.json();
 
       if (data.success) {
         // Update local state
-        setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+        setTasks(
+          tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+        );
         console.log("Task status updated successfully");
       } else {
         alert("Failed to update task status: " + (data.error || data.message));
@@ -930,17 +947,31 @@ export default function TicketingSystem() {
             }}
           >
             <div style={{ fontSize: "64px", marginBottom: "16px" }}>🚫</div>
-            <h2 style={{ fontSize: "24px", fontWeight: "bold", margin: "0 0 8px 0", color: "#1a202c" }}>
+            <h2
+              style={{
+                fontSize: "24px",
+                fontWeight: "bold",
+                margin: "0 0 8px 0",
+                color: "#1a202c",
+              }}
+            >
               Access Denied
             </h2>
             <p style={{ color: "#718096", margin: "0 0 16px 0" }}>
               You don't have permission to access the Tasks page.
             </p>
             <p style={{ fontSize: "14px", color: "#9ca3af", margin: 0 }}>
-              Required: Admin, Project Manager role, or Employee with Project Manager designation
+              Required: Admin, Project Manager role, or Employee with Project
+              Manager designation
             </p>
-            <p style={{ fontSize: "14px", color: "#9ca3af", margin: "8px 0 0 0" }}>
-              Your current role: {user?.role || 'Unknown'}
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#9ca3af",
+                margin: "8px 0 0 0",
+              }}
+            >
+              Your current role: {user?.role || "Unknown"}
             </p>
           </div>
         </div>
@@ -992,15 +1023,18 @@ export default function TicketingSystem() {
                 <Plus size={18} /> Add Task
               </button>
             ) : (
-              <div style={{
-                backgroundColor: "#fef3c7",
-                color: "#d97706",
-                padding: "8px 16px",
-                borderRadius: "8px",
-                fontSize: "14px",
-                border: "1px solid #f59e0b"
-              }}>
-                You need Admin role, Project Manager role, or Employee with Project Manager designation to create tasks
+              <div
+                style={{
+                  backgroundColor: "#fef3c7",
+                  color: "#d97706",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  border: "1px solid #f59e0b",
+                }}
+              >
+                You need Admin role, Project Manager role, or Employee with
+                Project Manager designation to create tasks
               </div>
             )}
           </div>
@@ -1045,7 +1079,10 @@ export default function TicketingSystem() {
               </thead>
               <tbody>
                 {tasks.map((task) => (
-                  <tr key={task.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <tr
+                    key={task.id}
+                    style={{ borderBottom: "1px solid #e5e7eb" }}
+                  >
                     <td style={{ padding: "12px", fontFamily: "monospace" }}>
                       {task.id}
                     </td>
@@ -1089,7 +1126,13 @@ export default function TicketingSystem() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "12px", fontSize: "13px", color: "#6b7280" }}>
+                    <td
+                      style={{
+                        padding: "12px",
+                        fontSize: "13px",
+                        color: "#6b7280",
+                      }}
+                    >
                       {task.createdAt.toLocaleDateString()}
                     </td>
                     <td style={{ padding: "12px" }}>
@@ -1197,11 +1240,14 @@ export default function TicketingSystem() {
                   disabled={loadingEmployees}
                 >
                   <option value="">
-                    {loadingEmployees ? "Loading designations..." : "Select Designation"}
+                    {loadingEmployees
+                      ? "Loading designations..."
+                      : "Select Designation"}
                   </option>
                   {Object.keys(employeesByDesignation).map((designation) => (
                     <option key={designation} value={designation}>
-                      {designation} ({employeesByDesignation[designation].length})
+                      {designation} (
+                      {employeesByDesignation[designation].length})
                     </option>
                   ))}
                 </select>
@@ -1221,13 +1267,18 @@ export default function TicketingSystem() {
                     disabled={loadingEmployees}
                   >
                     <option value="">
-                      {loadingEmployees ? "Loading employees..." : "Select Employee"}
+                      {loadingEmployees
+                        ? "Loading employees..."
+                        : "Select Employee"}
                     </option>
-                    {employeesByDesignation[selectedDesignation]?.map((employee) => (
-                      <option key={employee._id} value={employee._id}>
-                        {employee.firstName} {employee.lastName} ({employee.email})
-                      </option>
-                    ))}
+                    {employeesByDesignation[selectedDesignation]?.map(
+                      (employee) => (
+                        <option key={employee._id} value={employee._id}>
+                          {employee.firstName} {employee.lastName} (
+                          {employee.email})
+                        </option>
+                      )
+                    )}
                   </select>
                 )}
                 <div style={{ display: "flex", gap: "12px" }}>
@@ -1236,13 +1287,20 @@ export default function TicketingSystem() {
                     disabled={!selectedEmployeeId || loadingEmployees}
                     style={{
                       flex: 1,
-                      backgroundColor: (!selectedEmployeeId || loadingEmployees) ? "#9ca3af" : "#3b82f6",
+                      backgroundColor:
+                        !selectedEmployeeId || loadingEmployees
+                          ? "#9ca3af"
+                          : "#3b82f6",
                       color: "white",
                       padding: "8px 16px",
                       borderRadius: "8px",
                       border: "none",
-                      cursor: (!selectedEmployeeId || loadingEmployees) ? "not-allowed" : "pointer",
-                      opacity: (!selectedEmployeeId || loadingEmployees) ? 0.6 : 1,
+                      cursor:
+                        !selectedEmployeeId || loadingEmployees
+                          ? "not-allowed"
+                          : "pointer",
+                      opacity:
+                        !selectedEmployeeId || loadingEmployees ? 0.6 : 1,
                     }}
                   >
                     {loadingEmployees ? "Loading..." : "Add Task"}
