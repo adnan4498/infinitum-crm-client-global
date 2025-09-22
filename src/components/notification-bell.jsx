@@ -16,16 +16,18 @@ import { useAuth } from "@/contexts/AuthContext"
 
 export function NotificationBell() {
   const { user, getToken } = useAuth()
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [stats, setStats] = useState({})
   const [notifications, setNotifications] = useState([])
   const [isOpen, setIsOpen] = useState(false)
+  const [taskCount, setTaskCount] = useState(0)
+  const [hasNewTask, setHasNewTask] = useState(false)
 
-  // Fetch unread count
-  const fetchUnreadCount = async () => {
+  // Fetch notification stats
+  const fetchStats = async () => {
     if (!user) return
 
     try {
-      const response = await fetch('/api/notifications/unread-count', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/notifications/stats`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
@@ -33,10 +35,34 @@ export function NotificationBell() {
 
       if (response.ok) {
         const data = await response.json()
-        setUnreadCount(data.data.unreadCount)
+        setStats(data.data.stats)
       }
     } catch (error) {
-      console.error('Failed to fetch unread count:', error)
+      console.error('Failed to fetch stats:', error)
+    }
+  }
+
+  // Fetch task count to detect new tasks
+  const fetchTaskCount = async () => {
+    if (!user) return
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/tasks?limit=1`, {
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const newCount = data.data.pagination.totalItems
+        if (newCount > taskCount && taskCount > 0) {
+          setHasNewTask(true)
+        }
+        setTaskCount(newCount)
+      }
+    } catch (error) {
+      console.error('Failed to fetch task count:', error)
     }
   }
 
@@ -45,7 +71,7 @@ export function NotificationBell() {
     if (!user) return
 
     try {
-      const response = await fetch('/api/notifications?limit=10', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/notifications?limit=10`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
@@ -63,7 +89,7 @@ export function NotificationBell() {
   // Mark notification as read
   const markAsRead = async (notificationId) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${getToken()}`
@@ -77,7 +103,7 @@ export function NotificationBell() {
             n.id === notificationId ? { ...n, isRead: true, status: 'read' } : n
           )
         )
-        setUnreadCount(prev => Math.max(0, prev - 1))
+        setStats(prev => ({ ...prev, totalUnread: Math.max(0, prev.totalUnread - 1) }))
       }
     } catch (error) {
       console.error('Failed to mark as read:', error)
@@ -87,7 +113,7 @@ export function NotificationBell() {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/notifications/mark-all-read`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${getToken()}`
@@ -98,7 +124,7 @@ export function NotificationBell() {
         setNotifications(prev =>
           prev.map(n => ({ ...n, isRead: true, status: 'read' }))
         )
-        setUnreadCount(0)
+        setStats(prev => ({ ...prev, totalUnread: 0 }))
       }
     } catch (error) {
       console.error('Failed to mark all as read:', error)
@@ -108,7 +134,7 @@ export function NotificationBell() {
   // Delete notification
   const deleteNotification = async (notificationId) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/notifications/${notificationId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${getToken()}`
@@ -117,10 +143,10 @@ export function NotificationBell() {
 
       if (response.ok) {
         setNotifications(prev => prev.filter(n => n.id !== notificationId))
-        // Update unread count if deleted notification was unread
+        // Update stats if deleted notification was unread
         const deletedNotification = notifications.find(n => n.id === notificationId)
         if (deletedNotification && !deletedNotification.isRead) {
-          setUnreadCount(prev => Math.max(0, prev - 1))
+          setStats(prev => ({ ...prev, totalUnread: Math.max(0, prev.totalUnread - 1) }))
         }
       }
     } catch (error) {
@@ -129,12 +155,14 @@ export function NotificationBell() {
   }
 
   useEffect(() => {
-    fetchUnreadCount()
+    fetchStats()
     fetchNotifications()
+    fetchTaskCount()
 
-    // Poll for new notifications every 30 seconds
+    // Poll for updates every 30 seconds
     const interval = setInterval(() => {
-      fetchUnreadCount()
+      fetchStats()
+      fetchTaskCount()
     }, 30000)
 
     return () => clearInterval(interval)
@@ -144,6 +172,7 @@ export function NotificationBell() {
     setIsOpen(open)
     if (open) {
       fetchNotifications()
+      setHasNewTask(false) // Reset new task indicator when opening
     }
   }
 
@@ -151,13 +180,13 @@ export function NotificationBell() {
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="relative">
-          <Bell size={20} />
-          {unreadCount > 0 && (
+          <Bell size={20} className={hasNewTask ? 'text-red-500' : ''} />
+          {stats.totalUnread > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {stats.totalUnread > 99 ? '99+' : stats.totalUnread}
             </Badge>
           )}
         </Button>
@@ -165,7 +194,7 @@ export function NotificationBell() {
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
-          {unreadCount > 0 && (
+          {stats.totalUnread > 0 && (
             <Button
               variant="ghost"
               size="sm"
