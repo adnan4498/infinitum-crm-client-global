@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/AuthContext"
 import { LogOut, User } from "lucide-react"
+import { NotificationBell } from "@/components/notification-bell"
 
 export function SiteHeader() {
   const { user, logout } = useAuth()
@@ -21,6 +22,7 @@ export function SiteHeader() {
         <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
         <h1 className="text-base font-medium">Infinitum CRM</h1>
         <div className="ml-auto flex items-center gap-2">
+          <NotificationBell />
           {user && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <User size={16} />

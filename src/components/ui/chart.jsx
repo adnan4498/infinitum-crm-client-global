@@ -166,7 +166,7 @@ function ChartTooltipContent({
               {formatter && item?.value !== undefined && item.name ? (
                 formatter(item.value, item.name, item, index, item.payload)
               ) : (
-                <>
+                <React.Fragment key={`tooltip-item-${index}`}>
                   {itemConfig?.icon ? (
                     <itemConfig.icon />
                   ) : (
@@ -204,7 +204,7 @@ function ChartTooltipContent({
                       </span>
                     )}
                   </div>
-                </>
+                </React.Fragment>
               )}
             </div>
           );

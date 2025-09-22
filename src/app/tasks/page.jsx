@@ -671,6 +671,8 @@ export default function TicketingSystem() {
   const [newTaskStatus, setNewTaskStatus] = useState("To Do");
   const [selectedDesignation, setSelectedDesignation] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [startDate, setStartDate] = useState("");
 
   const URL = process.env.NEXT_PUBLIC_URL;
   const PRODUCTION_URL = process.env.PRODUCTION_URL;
@@ -769,6 +771,8 @@ export default function TicketingSystem() {
             title: task.title,
             status: task.status,
             createdAt: new Date(task.createdAt),
+            dueDate: task.dueDate ? new Date(task.dueDate) : null,
+            startDate: task.startDate ? new Date(task.startDate) : null,
             priority: task.priority,
             assignee: task.assignedTo
               ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}`
@@ -797,7 +801,7 @@ export default function TicketingSystem() {
   }, [hasAccess, user]);
 
   const handleAddTask = async () => {
-    if (!newTaskTitle.trim() || !selectedEmployeeId) return;
+    if (!newTaskTitle.trim() || !selectedEmployeeId || !dueDate) return;
 
     try {
       const taskData = {
@@ -805,7 +809,8 @@ export default function TicketingSystem() {
         description: newTaskTitle, // Using title as description for now
         assignedTo: selectedEmployeeId,
         priority: "medium",
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+        dueDate: new Date(dueDate).toISOString(),
+        startDate: startDate ? new Date(startDate).toISOString() : null,
         category: selectedDesignation.toLowerCase(),
         tags: [selectedDesignation.toLowerCase()],
       };
@@ -836,6 +841,8 @@ export default function TicketingSystem() {
           title: data.data.task.title,
           status: data.data.task.status,
           createdAt: new Date(data.data.task.createdAt),
+          dueDate: data.data.task.dueDate ? new Date(data.data.task.dueDate) : null,
+          startDate: data.data.task.startDate ? new Date(data.data.task.startDate) : null,
           priority: data.data.task.priority,
           assignee: data.data.task.assignedTo
             ? `${data.data.task.assignedTo.firstName} ${data.data.task.assignedTo.lastName}`
@@ -850,6 +857,8 @@ export default function TicketingSystem() {
         setNewTaskTitle("");
         setSelectedDesignation("");
         setSelectedEmployeeId("");
+        setDueDate("");
+        setStartDate("");
         setShowAddTask(false);
 
         alert("Task created successfully!");
@@ -1058,6 +1067,8 @@ export default function TicketingSystem() {
                     "Priority",
                     "Status",
                     "Assignee",
+                    "Start Date",
+                    "Due Date",
                     "Created At",
                     "Actions",
                   ].map((col) => (
@@ -1133,6 +1144,24 @@ export default function TicketingSystem() {
                         color: "#6b7280",
                       }}
                     >
+                      {task.startDate ? new Date(task.startDate).toLocaleDateString() : "N/A"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px",
+                        fontSize: "13px",
+                        color: "#6b7280",
+                      }}
+                    >
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px",
+                        fontSize: "13px",
+                        color: "#6b7280",
+                      }}
+                    >
                       {task.createdAt.toLocaleDateString()}
                     </td>
                     <td style={{ padding: "12px" }}>
@@ -1154,7 +1183,7 @@ export default function TicketingSystem() {
                 {tasks.length === 0 && (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="9"
                       style={{
                         padding: "32px",
                         textAlign: "center",
@@ -1281,14 +1310,76 @@ export default function TicketingSystem() {
                     )}
                   </select>
                 )}
+
+                {/* Due Date Input */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label
+                    htmlFor="dueDate"
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#374151",
+                    }}
+                  >
+                    Due Date *
+                  </label>
+                  <input
+                    id="dueDate"
+                    type="datetime-local"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      boxSizing: "border-box",
+                    }}
+                    required
+                  />
+                </div>
+
+                {/* Start Date Input */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label
+                    htmlFor="startDate"
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#374151",
+                    }}
+                  >
+                    Start Date (Optional)
+                  </label>
+                  <input
+                    id="startDate"
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
                 <div style={{ display: "flex", gap: "12px" }}>
                   <button
                     onClick={handleAddTask}
-                    disabled={!selectedEmployeeId || loadingEmployees}
+                    disabled={!selectedEmployeeId || !dueDate || loadingEmployees}
                     style={{
                       flex: 1,
                       backgroundColor:
-                        !selectedEmployeeId || loadingEmployees
+                        !selectedEmployeeId || !dueDate || loadingEmployees
                           ? "#9ca3af"
                           : "#3b82f6",
                       color: "white",
@@ -1296,11 +1387,11 @@ export default function TicketingSystem() {
                       borderRadius: "8px",
                       border: "none",
                       cursor:
-                        !selectedEmployeeId || loadingEmployees
+                        !selectedEmployeeId || !dueDate || loadingEmployees
                           ? "not-allowed"
                           : "pointer",
                       opacity:
-                        !selectedEmployeeId || loadingEmployees ? 0.6 : 1,
+                        !selectedEmployeeId || !dueDate || loadingEmployees ? 0.6 : 1,
                     }}
                   >
                     {loadingEmployees ? "Loading..." : "Add Task"}

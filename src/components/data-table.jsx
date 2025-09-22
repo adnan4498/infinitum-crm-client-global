@@ -245,7 +245,7 @@ const columns = [
       }
 
       return (
-        <>
+        <React.Fragment key={`reviewer-${row.original.id}`}>
           <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
             Reviewer
           </Label>
@@ -263,7 +263,7 @@ const columns = [
               </SelectItem>
             </SelectContent>
           </Select>
-        </>
+        </React.Fragment>
       );
     },
   },
@@ -611,7 +611,7 @@ function TableCellViewer({
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           {!isMobile && (
-            <>
+            <React.Fragment key={`chart-${item.id}`}>
               <ChartContainer config={chartConfig}>
                 <AreaChart
                   accessibilityLayer
@@ -658,7 +658,7 @@ function TableCellViewer({
                 </div>
               </div>
               <Separator />
-            </>
+            </React.Fragment>
           )}
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">

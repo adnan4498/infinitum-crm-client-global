@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { IconCirclePlusFilled, IconMail } from "@tabler/icons-react";
 
@@ -35,9 +36,9 @@ export function NavMain({ items }) {
         </SidebarMenu>
         <SidebarMenu>
           {items.map((item) => (
-            <>
+            <React.Fragment key={item.title}>
               <div className="hover:bg-white transition-all duration-300 rounded-lg">
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem>
                   <SidebarMenuButton tooltip={item.title} asChild>
                     <Link href={item.url}>
                       {item.icon && <item.icon />}
@@ -46,7 +47,7 @@ export function NavMain({ items }) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </div>
-            </>
+            </React.Fragment>
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
