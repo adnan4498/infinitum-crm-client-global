@@ -36,104 +36,8 @@ import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight 
 
 import data from "../app/dashboard/data.json"
 
-// Task table columns
-const taskColumns = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => (
-      <div className="font-medium">{row.getValue("title")}</div>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status")
-      return (
-        <Badge
-          variant={
-            status === 'completed' ? 'default' :
-            status === 'in_progress' ? 'secondary' :
-            'outline'
-          }
-          className={
-            status === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
-            status === 'in_progress' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' :
-            'bg-gray-100 text-gray-800 hover:bg-gray-100'
-          }
-        >
-          {status.replace('_', ' ')}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: "priority",
-    header: "Priority",
-    cell: ({ row }) => {
-      const priority = row.getValue("priority")
-      return (
-        <Badge
-          variant="outline"
-          className={
-            priority === 'urgent' ? 'border-red-500 text-red-700' :
-            priority === 'high' ? 'border-orange-500 text-orange-700' :
-            priority === 'medium' ? 'border-yellow-500 text-yellow-700' :
-            'border-green-500 text-green-700'
-          }
-        >
-          {priority}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: "startDate",
-    header: "Start Date",
-    cell: ({ row }) => {
-      const startDate = row.getValue("startDate")
-      if (!startDate) return <span className="text-muted-foreground">N/A</span>
-
-      const date = new Date(startDate)
-      return (
-        <span>
-          {date.toLocaleDateString()}
-        </span>
-      )
-    },
-  },
-  {
-    accessorKey: "dueDate",
-    header: "Due Date",
-    cell: ({ row }) => {
-      const dueDate = row.getValue("dueDate")
-      if (!dueDate) return <span className="text-muted-foreground">N/A</span>
-
-      const date = new Date(dueDate)
-      const today = new Date()
-      const isOverdue = date < today && row.original.status !== 'completed'
-
-      return (
-        <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
-          {date.toLocaleDateString()}
-        </span>
-      )
-    },
-  },
-  {
-    accessorKey: "assignedBy",
-    header: "Assigned By",
-    cell: ({ row }) => {
-      const assignedBy = row.getValue("assignedBy")
-      if (!assignedBy) return <span className="text-muted-foreground">N/A</span>
-      return `${assignedBy.firstName} ${assignedBy.lastName}`
-    },
-  },
-]
-
 // TaskTable component
-function TaskTable({ tasks, loading }) {
+function TaskTable({ tasks, loading, columns }) {
   const [sorting, setSorting] = useState([])
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
@@ -145,7 +49,7 @@ function TaskTable({ tasks, loading }) {
 
   const table = useReactTable({
     data: tasks,
-    columns: taskColumns,
+    columns: columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -247,7 +151,7 @@ function TaskTable({ tasks, loading }) {
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={taskColumns.length}
+                  colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No tasks assigned to you yet.
@@ -335,8 +239,220 @@ function TaskTable({ tasks, loading }) {
 export function DashboardContent() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
+  const [previousTaskStatuses, setPreviousTaskStatuses] = useState({})
   const { user, getToken } = useAuth()
   const URL = process.env.NEXT_PUBLIC_URL
+
+  // Handle status update for individual tasks
+  const handleStatusUpdate = async (taskId, newStatus) => {
+    try {
+      const response = await fetch(`${URL}/api/tasks/${taskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Update local state
+        setTasks(prevTasks =>
+          prevTasks.map(task =>
+            (task._id || task.id) === taskId
+              ? { ...task, status: newStatus }
+              : task
+          )
+        )
+        toast.success("Task status updated successfully")
+      } else {
+        toast.error(data.message || "Failed to update task status")
+      }
+    } catch (error) {
+      console.error("Update task status error:", error)
+      toast.error("Network error. Please try again.")
+    }
+  }
+
+  // Check for task status changes and show notifications
+  const checkForStatusChanges = (newTasks) => {
+    const currentStatuses = {}
+    newTasks.forEach(task => {
+      currentStatuses[task._id || task.id] = task.status
+    })
+
+    // Compare with previous statuses
+    Object.keys(currentStatuses).forEach(taskId => {
+      const currentStatus = currentStatuses[taskId]
+      const previousStatus = previousTaskStatuses[taskId]
+
+      if (previousStatus && previousStatus !== currentStatus) {
+        // Find the task details
+        const task = newTasks.find(t => (t._id || t.id) === taskId)
+        if (task) {
+          const assigneeName = task.assignedTo ?
+            `${task.assignedTo.firstName} ${task.assignedTo.lastName}` :
+            'Unknown'
+
+          toast.success(
+            `Task "${task.title}" status changed from ${previousStatus.replace('_', ' ')} to ${currentStatus.replace('_', ' ')} by ${assigneeName}`,
+            {
+              duration: 5000,
+              description: `Assigned to: ${assigneeName}`
+            }
+          )
+        }
+      }
+    })
+
+    // Update previous statuses
+    setPreviousTaskStatuses(currentStatuses)
+  }
+
+  // Poll for task updates every 30 seconds
+  useEffect(() => {
+    // Only poll for users who can see tasks assigned by them (admins/PMs)
+    const canSeeAssignedTasks = user && (
+      user.role === 'admin' ||
+      user.role === 'project_manager' ||
+      (user.role === 'employee' && user.designation === 'project_manager')
+    )
+
+    if (!canSeeAssignedTasks) return
+
+    const pollForUpdates = async () => {
+      try {
+        const response = await fetch(`${URL}/api/tasks`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${getToken()}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            checkForStatusChanges(data.data.tasks)
+            // Update tasks if needed (but don't override manual updates)
+            setTasks(data.data.tasks)
+          }
+        }
+      } catch (error) {
+        console.error("Polling error:", error)
+      }
+    }
+
+    // Initial poll after 5 seconds
+    const initialTimeout = setTimeout(pollForUpdates, 5000)
+
+    // Set up interval for every 30 seconds
+    const interval = setInterval(pollForUpdates, 30000)
+
+    return () => {
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
+    }
+  }, [user, getToken, URL])
+
+  // Task table columns
+  const taskColumns = [
+    {
+      accessorKey: "title",
+      header: "Title",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("title")}</div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const task = row.original;
+        const status = row.getValue("status");
+        return (
+          <Select
+            value={status}
+            onValueChange={(newStatus) => handleStatusUpdate(task._id || task.id, newStatus)}
+          >
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        )
+      },
+    },
+    {
+      accessorKey: "priority",
+      header: "Priority",
+      cell: ({ row }) => {
+        const priority = row.getValue("priority")
+        return (
+          <Badge
+            variant="outline"
+            className={
+              priority === 'urgent' ? 'border-red-500 text-red-700' :
+              priority === 'high' ? 'border-orange-500 text-orange-700' :
+              priority === 'medium' ? 'border-yellow-500 text-yellow-700' :
+              'border-green-500 text-green-700'
+            }
+          >
+            {priority}
+          </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: "startDate",
+      header: "Start Date",
+      cell: ({ row }) => {
+        const startDate = row.getValue("startDate")
+        if (!startDate) return <span className="text-muted-foreground">N/A</span>
+
+        const date = new Date(startDate)
+        return (
+          <span>
+            {date.toLocaleDateString()}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "dueDate",
+      header: "Due Date",
+      cell: ({ row }) => {
+        const dueDate = row.getValue("dueDate")
+        if (!dueDate) return <span className="text-muted-foreground">N/A</span>
+
+        const date = new Date(dueDate)
+        const today = new Date()
+        const isOverdue = date < today && row.original.status !== 'completed'
+
+        return (
+          <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+            {date.toLocaleDateString()}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "assignedBy",
+      header: "Assigned By",
+      cell: ({ row }) => {
+        const assignedBy = row.getValue("assignedBy")
+        if (!assignedBy) return <span className="text-muted-foreground">N/A</span>
+        return `${assignedBy.firstName} ${assignedBy.lastName}`
+      },
+    },
+  ]
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -355,6 +471,12 @@ export function DashboardContent() {
 
         if (response.ok && data.success) {
           setTasks(data.data.tasks)
+          // Initialize previous task statuses for comparison
+          const initialStatuses = {}
+          data.data.tasks.forEach(task => {
+            initialStatuses[task._id || task.id] = task.status
+          })
+          setPreviousTaskStatuses(initialStatuses)
         } else {
           toast.error(data.message || "Failed to fetch tasks")
         }
@@ -391,7 +513,7 @@ export function DashboardContent() {
       {/* Tasks Section */}
       <div className="px-4 lg:px-6">
         <h2 className="text-lg font-semibold mb-4">My Tasks</h2>
-        <TaskTable tasks={tasks} loading={loading} />
+        <TaskTable tasks={tasks} loading={loading} columns={taskColumns} />
       </div>
 
       {/* <DataTable data={data} /> */}

@@ -145,12 +145,7 @@ export function AppSidebar({
         user.role === 'project_manager' ||
         (user.role === 'employee' && user.designation === 'project_manager')
       );
-      console.log("=== SIDEBAR TASKS VISIBILITY ===");
       console.log("User:", user);
-      console.log("User Role:", user?.role);
-      console.log("User Designation:", user?.designation);
-      console.log("Tasks Menu Visible:", hasAccess);
-      console.log("================================");
       return hasAccess;
     }
     // Show all other items
