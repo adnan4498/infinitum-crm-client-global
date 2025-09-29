@@ -653,11 +653,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 //   );
 // }
 
-const priorityStyles = {
-  High: { backgroundColor: "#fee2e2", color: "#b91c1c" },
-  Medium: { backgroundColor: "#fef3c7", color: "#d97706" },
-  Low: { backgroundColor: "#dcfce7", color: "#16a34a" },
-};
 
 export default function TicketingSystem() {
   const { user } = useAuth();
@@ -773,7 +768,6 @@ export default function TicketingSystem() {
             createdAt: new Date(task.createdAt),
             dueDate: task.dueDate ? new Date(task.dueDate) : null,
             startDate: task.startDate ? new Date(task.startDate) : null,
-            priority: task.priority,
             assignee: task.assignedTo
               ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}`
               : "Unknown",
@@ -808,7 +802,6 @@ export default function TicketingSystem() {
         title: newTaskTitle,
         description: newTaskTitle, // Using title as description for now
         assignedTo: selectedEmployeeId,
-        priority: "medium",
         dueDate: new Date(dueDate).toISOString(),
         startDate: startDate ? new Date(startDate).toISOString() : null,
         category: selectedDesignation.toLowerCase(),
@@ -843,7 +836,6 @@ export default function TicketingSystem() {
           createdAt: new Date(data.data.task.createdAt),
           dueDate: data.data.task.dueDate ? new Date(data.data.task.dueDate) : null,
           startDate: data.data.task.startDate ? new Date(data.data.task.startDate) : null,
-          priority: data.data.task.priority,
           assignee: data.data.task.assignedTo
             ? `${data.data.task.assignedTo.firstName} ${data.data.task.assignedTo.lastName}`
             : "Unknown",
@@ -900,36 +892,6 @@ export default function TicketingSystem() {
     }
   };
 
-  const handleStatusChange = async (taskId, newStatus) => {
-    try {
-      // const response = await fetch(`https://adnan4498-infinitum-crm-server-glob.vercel.app/api/tasks/${taskId}`,
-      const response = await fetch(`${URL}/api/auth/${taskId}`, 
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Update local state
-        setTasks(
-          tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-        );
-        console.log("Task status updated successfully");
-      } else {
-        alert("Failed to update task status: " + (data.error || data.message));
-      }
-    } catch (error) {
-      console.error("Error updating task status:", error);
-      alert("Error updating task status. Please try again.");
-    }
-  };
 
   // If user doesn't have access, show access denied
   if (!hasAccess) {
@@ -1062,14 +1024,13 @@ export default function TicketingSystem() {
               <thead style={{ backgroundColor: "#f3f4f6" }}>
                 <tr>
                   {[
-                    "ID",
+                    // "ID",
                     "Title",
-                    "Priority",
                     "Status",
                     "Assignee",
-                    "Start Date",
-                    "Due Date",
                     "Created At",
+                    "Due Date",
+                    // "Start Date",
                     "Actions",
                   ].map((col) => (
                     <th
@@ -1094,40 +1055,33 @@ export default function TicketingSystem() {
                     key={task.id}
                     style={{ borderBottom: "1px solid #e5e7eb" }}
                   >
-                    <td style={{ padding: "12px", fontFamily: "monospace" }}>
+                    {/* <td style={{ padding: "12px", fontFamily: "monospace" }}>
                       {task.id}
-                    </td>
+                    </td> */}
                     <td style={{ padding: "12px" }}>{task.title}</td>
                     <td style={{ padding: "12px" }}>
                       <span
                         style={{
-                          fontSize: "12px",
-                          padding: "2px 8px",
+                          padding: "4px 12px",
                           borderRadius: "12px",
+                          fontSize: "12px",
                           fontWeight: "500",
-                          ...priorityStyles[task.priority],
+                          backgroundColor:
+                            task.status === "Done"
+                              ? "#dcfce7"
+                              : task.status === "In Progress"
+                              ? "#dbeafe"
+                              : "#fef3c7",
+                          color:
+                            task.status === "Done"
+                              ? "#166534"
+                              : task.status === "In Progress"
+                              ? "#1e40af"
+                              : "#92400e",
                         }}
                       >
-                        {task.priority}
+                        {task.status}
                       </span>
-                    </td>
-                    <td style={{ padding: "12px" }}>
-                      <select
-                        value={task.status}
-                        onChange={(e) =>
-                          handleStatusChange(task.id, e.target.value)
-                        }
-                        style={{
-                          padding: "6px 10px",
-                          border: "1px solid #d1d5db",
-                          borderRadius: "6px",
-                          fontSize: "14px",
-                        }}
-                      >
-                        <option value="To Do">To Do</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Done">Done</option>
-                      </select>
                     </td>
                     <td style={{ padding: "12px" }}>
                       <div>
@@ -1137,7 +1091,7 @@ export default function TicketingSystem() {
                         </div>
                       </div>
                     </td>
-                    <td
+                    {/* <td
                       style={{
                         padding: "12px",
                         fontSize: "13px",
@@ -1145,6 +1099,15 @@ export default function TicketingSystem() {
                       }}
                     >
                       {task.startDate ? new Date(task.startDate).toLocaleDateString() : "N/A"}
+                    </td> */}
+                        <td
+                      style={{
+                        padding: "12px",
+                        fontSize: "13px",
+                        color: "#6b7280",
+                      }}
+                    >
+                      {task.createdAt.toLocaleDateString()}
                     </td>
                     <td
                       style={{
@@ -1154,15 +1117,6 @@ export default function TicketingSystem() {
                       }}
                     >
                       {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A"}
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px",
-                        fontSize: "13px",
-                        color: "#6b7280",
-                      }}
-                    >
-                      {task.createdAt.toLocaleDateString()}
                     </td>
                     <td style={{ padding: "12px" }}>
                       <button
@@ -1183,7 +1137,7 @@ export default function TicketingSystem() {
                 {tasks.length === 0 && (
                   <tr>
                     <td
-                      colSpan="9"
+                      colSpan="8"
                       style={{
                         padding: "32px",
                         textAlign: "center",

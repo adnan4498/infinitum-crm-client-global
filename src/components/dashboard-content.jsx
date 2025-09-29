@@ -276,6 +276,68 @@ export function DashboardContent() {
     }
   }
 
+  // Handle starting a task
+  const handleStartTask = async (taskId) => {
+    try {
+      const response = await fetch(`${URL}/api/tasks/${taskId}/start`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Update local state - status should change to in_progress
+        setTasks(prevTasks =>
+          prevTasks.map(task =>
+            (task._id || task.id) === taskId
+              ? { ...task, status: 'in_progress', timeTracking: data.data.task.timeTracking }
+              : task
+          )
+        )
+        toast.success("Task started! Timer is now running.")
+      } else {
+        toast.error(data.message || "Failed to start task")
+      }
+    } catch (error) {
+      console.error("Start task error:", error)
+      toast.error("Network error. Please try again.")
+    }
+  }
+
+  // Handle ending a task
+  const handleEndTask = async (taskId) => {
+    try {
+      const response = await fetch(`${URL}/api/tasks/${taskId}/complete`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Update local state - status should change to completed
+        setTasks(prevTasks =>
+          prevTasks.map(task =>
+            (task._id || task.id) === taskId
+              ? { ...task, status: 'completed', timeTracking: data.data.task.timeTracking, completedDate: new Date() }
+              : task
+          )
+        )
+        toast.success("Task completed successfully!")
+      } else {
+        toast.error(data.message || "Failed to complete task")
+      }
+    } catch (error) {
+      console.error("Complete task error:", error)
+      toast.error("Network error. Please try again.")
+    }
+  }
+
   // Check for task status changes and show notifications
   const checkForStatusChanges = (newTasks) => {
     const currentStatuses = {}
@@ -370,46 +432,43 @@ export function DashboardContent() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const task = row.original;
         const status = row.getValue("status");
         return (
-          <Select
-            value={status}
-            onValueChange={(newStatus) => handleStatusUpdate(task._id || task.id, newStatus)}
-          >
-            <SelectTrigger className="w-32 h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        )
-      },
-    },
-    {
-      accessorKey: "priority",
-      header: "Priority",
-      cell: ({ row }) => {
-        const priority = row.getValue("priority")
-        return (
           <Badge
-            variant="outline"
-            className={
-              priority === 'urgent' ? 'border-red-500 text-red-700' :
-              priority === 'high' ? 'border-orange-500 text-orange-700' :
-              priority === 'medium' ? 'border-yellow-500 text-yellow-700' :
-              'border-green-500 text-green-700'
+            variant={
+              status === 'completed' ? 'default' :
+              status === 'in_progress' ? 'secondary' :
+              status === 'pending' ? 'outline' :
+              'destructive'
             }
           >
-            {priority}
+            {status === 'in_progress' ? 'In Progress' :
+             status === 'pending' ? 'To Do' :
+             status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
         )
       },
     },
+    // {
+    //   accessorKey: "priority",
+    //   header: "Priority",
+    //   cell: ({ row }) => {
+    //     const priority = row.getValue("priority")
+    //     return (
+    //       <Badge
+    //         variant="outline"
+    //         className={
+    //           priority === 'urgent' ? 'border-red-500 text-red-700' :
+    //           priority === 'high' ? 'border-orange-500 text-orange-700' :
+    //           priority === 'medium' ? 'border-yellow-500 text-yellow-700' :
+    //           'border-green-500 text-green-700'
+    //         }
+    //       >
+    //         {priority}
+    //       </Badge>
+    //     )
+    //   },
+    // },
     {
       accessorKey: "startDate",
       header: "Start Date",
@@ -450,6 +509,80 @@ export function DashboardContent() {
         const assignedBy = row.getValue("assignedBy")
         if (!assignedBy) return <span className="text-muted-foreground">N/A</span>
         return `${assignedBy.firstName} ${assignedBy.lastName}`
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const task = row.original;
+        const status = task.status;
+        const isAssignedToCurrentUser = task.assignedTo && task.assignedTo._id === user._id;
+
+        if (!isAssignedToCurrentUser) {
+          return <span className="text-muted-foreground text-sm">Not assigned to you</span>;
+        }
+
+        if (status === 'completed') {
+          return <span className="text-green-600 text-sm font-medium">✓ Completed</span>;
+        }
+
+        return (
+          <div className="flex gap-2">
+            {status === 'pending' && (
+              <Button
+                size="sm"
+                onClick={() => handleStartTask(task._id || task.id)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Start Task
+              </Button>
+            )}
+            {status === 'in_progress' && (
+              <Button
+                size="sm"
+                onClick={() => handleEndTask(task._id || task.id)}
+                variant="destructive"
+              >
+                End Task
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "timeSpent",
+      header: "Time Spent",
+      cell: ({ row }) => {
+        const task = row.original;
+        const timeTracking = task.timeTracking || {};
+        const totalTimeSpent = timeTracking.totalTimeSpent || 0;
+
+        if (totalTimeSpent === 0) {
+          return <span className="text-muted-foreground">Not started</span>;
+        }
+
+        // Convert milliseconds to hours and days
+        const hours = Math.floor(totalTimeSpent / (1000 * 60 * 60));
+        const remainingMs = totalTimeSpent % (1000 * 60 * 60);
+        const minutes = Math.floor(remainingMs / (1000 * 60));
+
+        if (hours >= 24) {
+          const days = Math.floor(hours / 24);
+          const remainingHours = hours % 24;
+          return (
+            <span className="font-medium">
+              {days}d {remainingHours}h {minutes}m
+            </span>
+          );
+        } else {
+          return (
+            <span className="font-medium">
+              {hours}h {minutes}m
+            </span>
+          );
+        }
       },
     },
   ]

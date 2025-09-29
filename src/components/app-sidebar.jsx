@@ -55,6 +55,16 @@ const data = {
       url: "/tasks",
       icon: IconBrandAsana,
     },
+    {
+      title: "My Attendance",
+      url: "/attendance",
+      icon: IconBrandAsana,
+    },
+    {
+      title: "Attendance History",
+      url: "/attendance/history",
+      icon: IconBrandAsana,
+    },
      {
       title: "Profile",
       url: "/profile",
