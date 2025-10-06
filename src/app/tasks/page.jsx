@@ -1024,15 +1024,16 @@ export default function TicketingSystem() {
               <thead style={{ backgroundColor: "#f3f4f6" }}>
                 <tr>
                   {[
-                    // "ID",
-                    "Title",
-                    "Status",
-                    "Assignee",
-                    "Created At",
-                    "Due Date",
-                    // "Start Date",
-                    "Actions",
-                  ].map((col) => (
+// "ID",
+"Title",
+"Status",
+"Assignee",
+"Created At",
+"Due Date",
+"Task End Time",
+// "Start Date",
+"Actions",
+].map((col) => (
                     <th
                       key={col}
                       style={{
@@ -1118,6 +1119,15 @@ export default function TicketingSystem() {
                     >
                       {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A"}
                     </td>
+                    <td
+                      style={{
+                        padding: "12px",
+                        fontSize: "13px",
+                        color: "#6b7280",
+                      }}
+                    >
+                      {task.completedDate ? new Date(task.completedDate).toLocaleDateString() : "N/A"}
+                    </td>
                     <td style={{ padding: "12px" }}>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
@@ -1137,7 +1147,7 @@ export default function TicketingSystem() {
                 {tasks.length === 0 && (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="7"
                       style={{
                         padding: "32px",
                         textAlign: "center",
