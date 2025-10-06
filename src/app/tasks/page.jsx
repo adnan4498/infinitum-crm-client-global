@@ -768,6 +768,8 @@ export default function TicketingSystem() {
             createdAt: new Date(task.createdAt),
             dueDate: task.dueDate ? new Date(task.dueDate) : null,
             startDate: task.startDate ? new Date(task.startDate) : null,
+            completedDate: task.completedDate ? new Date(task.completedDate) : null,
+            timeSpent: task.timeTracking?.totalTimeSpent || 0,
             assignee: task.assignedTo
               ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}`
               : "Unknown",
@@ -836,6 +838,8 @@ export default function TicketingSystem() {
           createdAt: new Date(data.data.task.createdAt),
           dueDate: data.data.task.dueDate ? new Date(data.data.task.dueDate) : null,
           startDate: data.data.task.startDate ? new Date(data.data.task.startDate) : null,
+          completedDate: data.data.task.completedDate ? new Date(data.data.task.completedDate) : null,
+          timeSpent: data.data.task.timeTracking?.totalTimeSpent || 0,
           assignee: data.data.task.assignedTo
             ? `${data.data.task.assignedTo.firstName} ${data.data.task.assignedTo.lastName}`
             : "Unknown",
@@ -1030,7 +1034,8 @@ export default function TicketingSystem() {
 "Assignee",
 "Created At",
 "Due Date",
-"Task End Time",
+"Task Completed At",
+"Time Spent",
 // "Start Date",
 "Actions",
 ].map((col) => (
@@ -1126,7 +1131,16 @@ export default function TicketingSystem() {
                         color: "#6b7280",
                       }}
                     >
-                      {task.completedDate ? new Date(task.completedDate).toLocaleDateString() : "N/A"}
+                      {task.completedDate ? new Date(task.completedDate).toLocaleString() : "N/A"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px",
+                        fontSize: "13px",
+                        color: "#6b7280",
+                      }}
+                    >
+                      {task.timeSpent ? `${(task.timeSpent / (1000 * 60 * 60)).toFixed(2)} hrs` : "0.00 hrs"}
                     </td>
                     <td style={{ padding: "12px" }}>
                       <button
@@ -1147,7 +1161,7 @@ export default function TicketingSystem() {
                 {tasks.length === 0 && (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="8"
                       style={{
                         padding: "32px",
                         textAlign: "center",
